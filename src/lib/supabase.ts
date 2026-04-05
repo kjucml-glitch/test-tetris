@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const isServiceRoleKey = typeof supabaseAnonKey === 'string' && supabaseAnonKey.startsWith('sb_secret_')
+const isVercelDeployment = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')
 
 export const hasSupabaseUrl = Boolean(supabaseUrl)
 export const hasSupabaseAnonKey = Boolean(supabaseAnonKey) && !isServiceRoleKey
@@ -10,6 +11,10 @@ export const isSupabaseConfigured = hasSupabaseUrl && hasSupabaseAnonKey
 
 export function getSupabaseSetupMessage() {
   if (!hasSupabaseUrl && !hasSupabaseAnonKey) {
+    if (isVercelDeployment) {
+      return '현재는 Vercel 배포 환경인데 환경변수가 비어 있습니다. Vercel Project Settings > Environment Variables에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 추가한 뒤 재배포해야 합니다.'
+    }
+
     return '.env.local에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 추가하세요.'
   }
 
@@ -18,10 +23,18 @@ export function getSupabaseSetupMessage() {
   }
 
   if (!hasSupabaseAnonKey) {
+    if (isVercelDeployment) {
+      return 'Vercel 배포 환경에 VITE_SUPABASE_ANON_KEY가 없습니다. Supabase API 설정의 anon public key를 Vercel Environment Variables에 추가하고 재배포하세요.'
+    }
+
     return 'VITE_SUPABASE_ANON_KEY가 비어 있습니다. 브라우저에는 service role key가 아니라 anon public key를 넣어야 합니다.'
   }
 
   if (!hasSupabaseUrl) {
+    if (isVercelDeployment) {
+      return 'Vercel 배포 환경에 VITE_SUPABASE_URL이 없습니다. Supabase Project URL을 Vercel Environment Variables에 추가하고 재배포하세요.'
+    }
+
     return 'VITE_SUPABASE_URL이 비어 있습니다. Supabase Project URL을 넣어야 합니다.'
   }
 

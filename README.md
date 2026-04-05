@@ -42,6 +42,17 @@ npm run dev
 
 6. 배포 시 Vercel Environment Variables에도 같은 두 값을 넣습니다.
 
+배포 화면에서 여전히 "Supabase 연결 정보가 아직 없습니다"가 보이면, 대부분 원인은 `.env.local`이 아니라 Vercel 프로젝트 환경변수 누락입니다. 로컬 `.env.local`은 Git에 올라가지 않으므로 배포에서는 자동으로 쓰이지 않습니다.
+
+Vercel에서 반드시 넣어야 하는 값:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
+```
+
+주의: `sb_secret_`로 시작하는 service role key는 브라우저 환경변수에 넣으면 안 됩니다.
+
 ## SQL이 하는 일
 
 - profiles: auth.users와 1:1 연결되는 사용자 프로필

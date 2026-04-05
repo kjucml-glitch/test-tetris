@@ -6,7 +6,7 @@ import { GamePanel } from './features/game/GamePanel.tsx'
 import { LeaderboardPanel } from './features/leaderboard/LeaderboardPanel.tsx'
 import type { GameResult } from './game/types.ts'
 import { saveScore } from './lib/api.ts'
-import { isSupabaseConfigured } from './lib/supabase.ts'
+import { getSupabaseSetupMessage, isSupabaseConfigured } from './lib/supabase.ts'
 
 type SaveFeedback = {
   status: 'idle' | 'saving' | 'success' | 'error'
@@ -24,8 +24,7 @@ function App() {
     if (!isSupabaseConfigured) {
       setSaveFeedback({
         status: 'idle',
-        message:
-          'VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하면 점수 저장과 리더보드가 활성화됩니다.',
+        message: getSupabaseSetupMessage(),
       })
       return
     }

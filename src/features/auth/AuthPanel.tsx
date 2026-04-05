@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
+import { getSupabaseSetupMessage } from '../../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 
 export function AuthPanel() {
@@ -49,7 +50,7 @@ export function AuthPanel() {
       {!isConfigured ? (
         <div className="empty-state">
           <p>Supabase 연결 정보가 아직 없습니다.</p>
-          <p className="muted">.env.local에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 추가하세요.</p>
+          <p className="muted">{getSupabaseSetupMessage()}</p>
         </div>
       ) : isLoading ? (
         <div className="empty-state">

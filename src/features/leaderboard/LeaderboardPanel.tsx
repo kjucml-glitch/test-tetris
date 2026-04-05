@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from '../../lib/supabase.ts'
+import { getSupabaseSetupMessage, isSupabaseConfigured } from '../../lib/supabase.ts'
 import { useLeaderboard } from './useLeaderboard.ts'
 
 export function LeaderboardPanel() {
@@ -14,7 +14,7 @@ export function LeaderboardPanel() {
       {!isSupabaseConfigured ? (
         <div className="empty-state">
           <p>연동 전에는 로컬 플레이만 가능합니다.</p>
-          <p className="muted">환경변수를 넣고 Supabase SQL을 적용하면 순위표가 활성화됩니다.</p>
+          <p className="muted">{getSupabaseSetupMessage()}</p>
         </div>
       ) : isLoading ? (
         <div className="empty-state">

@@ -12,21 +12,23 @@ export type LeaderboardEntry = {
 }
 
 type StatsRow = {
-  highest_score: number | null
-  total_games: number | null
-  total_lines: number | null
-  avg_score: number | string | null
-}
-
-type LeaderboardRow = {
   user_id: string
+  username: string
   highest_score: number
+  last_score: number
   total_games: number
   total_lines: number
+  avg_score: number | string
   updated_at: string
-  profiles: {
-    username: string | null
-  } | null
+}
+
+type SubmitScoreRow = {
+  score: number
+  highest_score: number
+  last_score: number
+  total_games: number
+  total_lines: number
+  avg_score: number | string
 }
 
 function fallbackName(user: User): string {
@@ -41,84 +43,27 @@ export async function saveScore(user: User, result: GameResult): Promise<{ ok: b
     }
   }
 
-  const username = fallbackName(user)
-  const profileResponse = await supabase.from('profiles').upsert(
-    {
-      id: user.id,
-      username,
-    },
-    {
-      onConflict: 'id',
-    },
-  )
-
-  if (profileResponse.error) {
-    return {
-      ok: false,
-      message: `프로필 초기화에 실패했습니다: ${profileResponse.error.message}`,
-    }
-  }
-
-  const scoreResponse = await supabase.from('scores').insert({
-    user_id: user.id,
-    score: result.score,
-    lines: result.lines,
-    level: result.level,
+  const scoreResponse = await supabase.rpc('submit_score', {
+    p_score: result.score,
+    p_lines: result.lines,
+    p_level: result.level,
   })
 
   if (scoreResponse.error) {
     return {
       ok: false,
-      message: `점수 저장에 실패했습니다: ${scoreResponse.error.message}`,
+      message: `점수 저장 RPC에 실패했습니다: ${scoreResponse.error.message}`,
     }
   }
 
-  const statsResponse = await supabase
-    .from('user_stats')
-    .select('highest_score, total_games, total_lines, avg_score')
-    .eq('user_id', user.id)
-    .maybeSingle<StatsRow>()
-
-  if (statsResponse.error) {
-    return {
-      ok: false,
-      message: `통계 조회에 실패했습니다: ${statsResponse.error.message}`,
-    }
-  }
-
-  const previousGames = statsResponse.data?.total_games ?? 0
-  const previousLines = statsResponse.data?.total_lines ?? 0
-  const previousHighest = statsResponse.data?.highest_score ?? 0
-  const previousAverage = Number(statsResponse.data?.avg_score ?? 0)
-  const nextGames = previousGames + 1
-  const nextHighest = Math.max(previousHighest, result.score)
-  const nextLines = previousLines + result.lines
-  const nextAverage = (previousAverage * previousGames + result.score) / nextGames
-
-  const upsertResponse = await supabase.from('user_stats').upsert(
-    {
-      user_id: user.id,
-      highest_score: nextHighest,
-      total_games: nextGames,
-      total_lines: nextLines,
-      avg_score: Number(nextAverage.toFixed(2)),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: 'user_id',
-    },
-  )
-
-  if (upsertResponse.error) {
-    return {
-      ok: false,
-      message: `통계 업데이트에 실패했습니다: ${upsertResponse.error.message}`,
-    }
-  }
+  const summary = (scoreResponse.data?.[0] ?? null) as SubmitScoreRow | null
+  const username = fallbackName(user)
 
   return {
     ok: true,
-    message: `점수 ${result.score.toLocaleString()}점을 저장했습니다.`,
+    message: summary
+      ? `${username} 점수 ${summary.score.toLocaleString()}점을 저장했습니다. 최고 점수는 ${summary.highest_score.toLocaleString()}점입니다.`
+      : `점수 ${result.score.toLocaleString()}점을 저장했습니다.`,
   }
 }
 
@@ -128,8 +73,8 @@ export async function fetchLeaderboard(limit = 10): Promise<LeaderboardEntry[]> 
   }
 
   const response = await supabase
-    .from('user_stats')
-    .select('user_id, highest_score, total_games, total_lines, updated_at, profiles(username)')
+    .from('leaderboard')
+    .select('user_id, username, highest_score, last_score, total_games, total_lines, avg_score, updated_at')
     .order('highest_score', { ascending: false })
     .order('updated_at', { ascending: true })
     .limit(limit)
@@ -138,10 +83,10 @@ export async function fetchLeaderboard(limit = 10): Promise<LeaderboardEntry[]> 
     throw response.error
   }
 
-  const rows = (response.data ?? []) as unknown as LeaderboardRow[]
+  const rows = (response.data ?? []) as unknown as StatsRow[]
   return rows.map((row) => ({
     userId: row.user_id,
-    username: row.profiles?.username ?? `pilot-${row.user_id.slice(0, 8)}`,
+    username: row.username ?? `pilot-${row.user_id.slice(0, 8)}`,
     highestScore: row.highest_score,
     totalGames: row.total_games,
     totalLines: row.total_lines,
